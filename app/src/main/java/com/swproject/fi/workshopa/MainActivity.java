@@ -2,6 +2,7 @@ package com.swproject.fi.workshopa;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -24,21 +25,22 @@ import com.aware.Aware_Preferences;
 import com.aware.Gyroscope;
 import com.aware.Magnetometer;
 import com.aware.providers.Accelerometer_Provider;
+import com.aware.providers.Gyroscope_Provider;
+
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class MainActivity extends Activity implements View.OnTouchListener{
     private static AccelerometerObserver accelObs;
     public static final String TAG = "com.fi.workshopa.MainActivity";
-    private static Intent labelBackhandAccel;
-    private static Intent labelForehandAccel;
-    private static Intent labelBackhandGyro;
-    private static Intent labelForehandGyro;
-    private static Intent labelBackhandMagnet;
-    private static Intent labelForehandMagnet;
+
     private static int countBackhand = 0;
     private static int countForehand = 0;
-    private static boolean isBackPressed;
-    private static boolean isForePressed;
+    private static boolean isBackPressed = false;
+    private static boolean isForePressed = false;
+    private static long timestampStart;
+    private static long timestampEnd;
     private SharedPreferences prefs;
     private Runnable update;
     private Handler handler;
@@ -49,6 +51,17 @@ public class MainActivity extends Activity implements View.OnTouchListener{
         setContentView(R.layout.activity_main);
         Button btnBackhand = (Button) findViewById(R.id.btnBackhand);
         Button btnForehand = (Button) findViewById(R.id.btnForehand);
+
+        /*Switch swh = (Switch) findViewById(R.id.switch1);
+        swh.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                if (b)
+                    isBackPressed = true;
+                else
+                    isBackPressed = false;
+            }
+        });*/
         final TextView txtBack = (TextView) findViewById(R.id.txtBackhand);
         final TextView txtFore = (TextView) findViewById(R.id.txtForehand);
 
@@ -76,6 +89,12 @@ public class MainActivity extends Activity implements View.OnTouchListener{
         Aware.setSetting(getApplicationContext(), Aware_Preferences.FREQUENCY_GYROSCOPE, 20000);
         Aware.setSetting(getApplicationContext(), Aware_Preferences.STATUS_MAGNETOMETER, true);
         Aware.setSetting(getApplicationContext(), Aware_Preferences.FREQUENCY_MAGNETOMETER, 20000);
+
+        /*accelObs = new AccelerometerObserver(new Handler());
+        getContentResolver().registerContentObserver(
+                Accelerometer_Provider.Accelerometer_Data.CONTENT_URI,
+                true,
+                accelObs);*/
 
         IntentFilter filter = new IntentFilter();
         filter.addAction(Accelerometer.ACTION_AWARE_ACCELEROMETER);
@@ -116,6 +135,7 @@ public class MainActivity extends Activity implements View.OnTouchListener{
     public void onDestroy(){
         super.onDestroy();
         unregisterReceiver(accelReceiver);
+        getContentResolver().unregisterContentObserver(accelObs);
         Aware.setSetting(getApplicationContext(), Aware_Preferences.STATUS_ACCELEROMETER, false);
         Aware.setSetting(getApplicationContext(), Aware_Preferences.STATUS_MAGNETOMETER, false);
         Aware.setSetting(getApplicationContext(), Aware_Preferences.STATUS_GYROSCOPE, false);
@@ -131,10 +151,12 @@ public class MainActivity extends Activity implements View.OnTouchListener{
                     case MotionEvent.ACTION_DOWN:
                         isBackPressed = true;
                         Log.e(TAG, "ACTION_DOWN");
+                        timestampStart = System.currentTimeMillis();
                         return true;
 
                     case MotionEvent.ACTION_UP:
                         isBackPressed = false;
+                        timestampEnd = System.currentTimeMillis();
                         Log.e(TAG, "ACTION_UP");
                         editor.putInt("backhand", countBackhand);
                         editor.apply();
@@ -184,29 +206,46 @@ public class MainActivity extends Activity implements View.OnTouchListener{
     private static AccelReceiver accelReceiver = new AccelReceiver();
 
     public static class AccelReceiver extends BroadcastReceiver{
+        private List<Double> accel;
+        private List<Double> gyro;
+        private List<Double> magnet;
         @Override
         public void onReceive(Context context, Intent intent) {
             if (intent.getAction().equals(Accelerometer.ACTION_AWARE_ACCELEROMETER)){
+                ContentValues raw_data = (ContentValues) intent.getParcelableExtra(Accelerometer.EXTRA_DATA);
+                Log.d("DEMO", raw_data.toString());
+
+                accel = new ArrayList<>(2);
+
+                double x = raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_0);
+                double y = raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_1);
+                double z = raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_2);
+
                 if (isBackPressed){
-                    labelBackhandAccel = new Intent(Accelerometer.ACTION_AWARE_ACCELEROMETER_LABEL);
-                    labelBackhandAccel.putExtra(Accelerometer.EXTRA_LABEL, "backhand " + countBackhand);
-                    context.sendBroadcast(labelBackhandAccel);
-                }
-                if (isForePressed){
-                    labelForehandAccel = new Intent(Accelerometer.ACTION_AWARE_ACCELEROMETER_LABEL);
-                    labelForehandAccel.putExtra(Accelerometer.EXTRA_LABEL, "forehand " + countForehand);
-                    context.sendBroadcast(labelForehandAccel);
+                    ContentValues data = new ContentValues();
+                    data.put(Provider.Plugin_Data.TIMESTAMP, System.currentTimeMillis());
+                    data.put(Provider.Plugin_Data.DEVICE_ID, Aware.getSetting(context, Aware_Preferences.DEVICE_ID));
+                    data.put(Provider.Plugin_Data.ACCEL_AXIS_X, x);
+                    data.put(Provider.Plugin_Data.ACCEL_AXIS_Y, y);
+                    data.put(Provider.Plugin_Data.ACCEL_AXIS_Z, z);
+                    data.put(Provider.Plugin_Data.COUNT, countBackhand);
+                    context.getContentResolver().insert(Provider.Plugin_Data.CONTENT_URI, data);
                 }
             }
 
             if (intent.getAction().equals(Gyroscope.ACTION_AWARE_GYROSCOPE)){
+                ContentValues raw_data = (ContentValues) intent.getParcelableExtra(Accelerometer.EXTRA_DATA);
+
+                double x = raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_0);
+                double y = raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_1);
+                double z = raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_2);
+
                 if (isBackPressed){
-                    labelBackhandGyro = new Intent(Gyroscope.ACTION_AWARE_GYROSCOPE_LABEL);
-                    labelBackhandGyro.putExtra(Gyroscope.EXTRA_LABEL, "backhand " + countBackhand);
-                    context.sendBroadcast(labelBackhandGyro);
+                    ContentValues data = new ContentValues();
+                    //data.put();
                 }
                 if (isForePressed){
-                    labelForehandGyro = new Intent(Gyroscope.ACTION_AWARE_GYROSCOPE_LABEL);
+                    Intent labelForehandGyro = new Intent(Gyroscope.ACTION_AWARE_GYROSCOPE_LABEL);
                     labelForehandGyro.putExtra(Gyroscope.EXTRA_LABEL, "forehand " + countBackhand);
                     context.sendBroadcast(labelForehandGyro);
                 }
@@ -214,12 +253,12 @@ public class MainActivity extends Activity implements View.OnTouchListener{
 
             if (intent.getAction().equals(Magnetometer.ACTION_AWARE_MAGNETOMETER)){
                 if (isBackPressed){
-                    labelBackhandMagnet = new Intent(Magnetometer.ACTION_AWARE_MAGNETOMETER_LABEL);
+                    Intent labelBackhandMagnet = new Intent(Magnetometer.ACTION_AWARE_MAGNETOMETER_LABEL);
                     labelBackhandMagnet.putExtra(Magnetometer.EXTRA_LABEL, "backhand " + countBackhand);
                     context.sendBroadcast(labelBackhandMagnet);
                 }
                 if (isForePressed){
-                    labelForehandMagnet = new Intent(Magnetometer.ACTION_AWARE_MAGNETOMETER_LABEL);
+                    Intent labelForehandMagnet = new Intent(Magnetometer.ACTION_AWARE_MAGNETOMETER_LABEL);
                     labelForehandMagnet.putExtra(Magnetometer.EXTRA_LABEL, "forehand " + countForehand);
                     context.sendBroadcast(labelForehandMagnet);
                 }
@@ -235,32 +274,30 @@ public class MainActivity extends Activity implements View.OnTouchListener{
         @Override
         public void onChange(boolean selfChange) {
             super.onChange(selfChange);
+            if (isBackPressed){
+                Cursor raw_data = getContentResolver().query(
+                        Accelerometer_Provider.Accelerometer_Data.CONTENT_URI,
+                        null,
+                        null,
+                        null,
+                        Accelerometer_Provider.Accelerometer_Data.TIMESTAMP + " DESC LIMIT 1");
 
-            Cursor raw_data = getContentResolver().query(
-                    Accelerometer_Provider.Accelerometer_Data.CONTENT_URI,
-                    null,
-                    null,
-                    null,
-                    Accelerometer_Provider.Accelerometer_Data.TIMESTAMP + " DESC LIMIT 1");
+                double mag_accel = 0;
+                if( raw_data != null && raw_data.moveToFirst() ) {
+                    do {
 
-            double mag_accel = 0;
-            if( raw_data != null && raw_data.moveToFirst() ) {
-                do {
+                        double x = raw_data.getDouble(raw_data.getColumnIndex(Accelerometer_Provider.Accelerometer_Data.VALUES_0));
+                        double y = raw_data.getDouble(raw_data.getColumnIndex(Accelerometer_Provider.Accelerometer_Data.VALUES_1));
+                        double z = raw_data.getDouble(raw_data.getColumnIndex(Accelerometer_Provider.Accelerometer_Data.VALUES_2));
 
-                    double x = raw_data.getDouble(raw_data.getColumnIndex(Accelerometer_Provider.Accelerometer_Data.VALUES_0));
-                    double y = raw_data.getDouble(raw_data.getColumnIndex(Accelerometer_Provider.Accelerometer_Data.VALUES_1));
-                    double z = raw_data.getDouble(raw_data.getColumnIndex(Accelerometer_Provider.Accelerometer_Data.VALUES_2));
+                        mag_accel = Math.sqrt(x * x + y * y + z * z);
+                        //Log.e(TAG, "result accel " + mag_accel);
 
-                    Intent lable = new Intent(Accelerometer.ACTION_AWARE_ACCELEROMETER_LABEL);
-                    lable.putExtra(Accelerometer.EXTRA_LABEL, "MY_DATA");
-                    sendBroadcast(lable);
-
-                    mag_accel = Math.sqrt(x * x + y * y + z * z);
-                    //Log.e(TAG, "result accel " + mag_accel);
-
-                }while( raw_data.moveToNext() );
+                    }while( raw_data.moveToNext() );
+                }
+                if( raw_data != null && ! raw_data.isClosed() ) raw_data.close();
             }
-            if( raw_data != null && ! raw_data.isClosed() ) raw_data.close();
-        }
+            }
+
     }
 }
