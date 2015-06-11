@@ -10,6 +10,7 @@ import android.database.ContentObserver;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -27,7 +28,7 @@ import com.aware.providers.Accelerometer_Provider;
 
 public class MainActivity extends Activity implements View.OnTouchListener{
     private static AccelerometerObserver accelObs;
-    public static final String TAG = "com.swproject.fi.workshopa.MainActivity";
+    public static final String TAG = "com.fi.workshopa.MainActivity";
     private static Intent labelBackhandAccel;
     private static Intent labelForehandAccel;
     private static Intent labelBackhandGyro;
@@ -36,6 +37,8 @@ public class MainActivity extends Activity implements View.OnTouchListener{
     private static Intent labelForehandMagnet;
     private static int countBackhand = 0;
     private static int countForehand = 0;
+    private static boolean isBackPressed;
+    private static boolean isForePressed;
     private SharedPreferences prefs;
     private Runnable update;
     private Handler handler;
@@ -126,14 +129,16 @@ public class MainActivity extends Activity implements View.OnTouchListener{
             case R.id.btnBackhand:
                 switch (motionEvent.getAction()){
                     case MotionEvent.ACTION_DOWN:
-                        sendBroadcast(labelBackhandAccel);
-                        sendBroadcast(labelBackhandGyro);
-                        sendBroadcast(labelBackhandMagnet);
+                        isBackPressed = true;
+                        Log.e(TAG, "ACTION_DOWN");
                         return true;
+
                     case MotionEvent.ACTION_UP:
-                        countBackhand++;
+                        isBackPressed = false;
+                        Log.e(TAG, "ACTION_UP");
                         editor.putInt("backhand", countBackhand);
                         editor.apply();
+                        countBackhand++;
                         //editor.commit();
                         handler.postDelayed(update, 0);
                         return true;
@@ -142,14 +147,15 @@ public class MainActivity extends Activity implements View.OnTouchListener{
             case R.id.btnForehand:
                 switch (motionEvent.getAction()){
                     case MotionEvent.ACTION_DOWN:
-                        sendBroadcast(labelForehandAccel);
-                        sendBroadcast(labelForehandGyro);
-                        sendBroadcast(labelForehandMagnet);
+                        isForePressed = true;
+
                         return true;
+
                     case MotionEvent.ACTION_UP:
-                        countForehand++;
+                        isForePressed = false;
                         editor.putInt("forehand", countForehand);
                         editor.apply();
+                        countForehand++;
                         //editor.commit();
                         handler.postDelayed(update, 0);
                         return true;
@@ -181,27 +187,42 @@ public class MainActivity extends Activity implements View.OnTouchListener{
         @Override
         public void onReceive(Context context, Intent intent) {
             if (intent.getAction().equals(Accelerometer.ACTION_AWARE_ACCELEROMETER)){
-                labelBackhandAccel = new Intent(Accelerometer.ACTION_AWARE_ACCELEROMETER_LABEL);
-                labelBackhandAccel.putExtra(Accelerometer.EXTRA_LABEL, "backhand " + countBackhand);
-
-                labelForehandAccel = new Intent(Accelerometer.ACTION_AWARE_ACCELEROMETER_LABEL);
-                labelForehandAccel.putExtra(Accelerometer.EXTRA_LABEL, "forehand " + countForehand);
+                if (isBackPressed){
+                    labelBackhandAccel = new Intent(Accelerometer.ACTION_AWARE_ACCELEROMETER_LABEL);
+                    labelBackhandAccel.putExtra(Accelerometer.EXTRA_LABEL, "backhand " + countBackhand);
+                    context.sendBroadcast(labelBackhandAccel);
+                }
+                if (isForePressed){
+                    labelForehandAccel = new Intent(Accelerometer.ACTION_AWARE_ACCELEROMETER_LABEL);
+                    labelForehandAccel.putExtra(Accelerometer.EXTRA_LABEL, "forehand " + countForehand);
+                    context.sendBroadcast(labelForehandAccel);
+                }
             }
 
             if (intent.getAction().equals(Gyroscope.ACTION_AWARE_GYROSCOPE)){
-                labelBackhandGyro = new Intent(Gyroscope.ACTION_AWARE_GYROSCOPE_LABEL);
-                labelBackhandGyro.putExtra(Gyroscope.EXTRA_LABEL, "backhand " + countBackhand);
-
-                labelForehandGyro = new Intent(Gyroscope.ACTION_AWARE_GYROSCOPE_LABEL);
-                labelForehandGyro.putExtra(Gyroscope.EXTRA_LABEL, "forehand " + countBackhand);
+                if (isBackPressed){
+                    labelBackhandGyro = new Intent(Gyroscope.ACTION_AWARE_GYROSCOPE_LABEL);
+                    labelBackhandGyro.putExtra(Gyroscope.EXTRA_LABEL, "backhand " + countBackhand);
+                    context.sendBroadcast(labelBackhandGyro);
+                }
+                if (isForePressed){
+                    labelForehandGyro = new Intent(Gyroscope.ACTION_AWARE_GYROSCOPE_LABEL);
+                    labelForehandGyro.putExtra(Gyroscope.EXTRA_LABEL, "forehand " + countBackhand);
+                    context.sendBroadcast(labelForehandGyro);
+                }
             }
 
             if (intent.getAction().equals(Magnetometer.ACTION_AWARE_MAGNETOMETER)){
-                labelBackhandMagnet = new Intent(Magnetometer.ACTION_AWARE_MAGNETOMETER_LABEL);
-                labelBackhandMagnet.putExtra(Magnetometer.EXTRA_LABEL, "backhand " + countBackhand);
-
-                labelForehandMagnet = new Intent(Magnetometer.ACTION_AWARE_MAGNETOMETER_LABEL);
-                labelForehandMagnet.putExtra(Magnetometer.EXTRA_LABEL, "forehand " + countForehand);
+                if (isBackPressed){
+                    labelBackhandMagnet = new Intent(Magnetometer.ACTION_AWARE_MAGNETOMETER_LABEL);
+                    labelBackhandMagnet.putExtra(Magnetometer.EXTRA_LABEL, "backhand " + countBackhand);
+                    context.sendBroadcast(labelBackhandMagnet);
+                }
+                if (isForePressed){
+                    labelForehandMagnet = new Intent(Magnetometer.ACTION_AWARE_MAGNETOMETER_LABEL);
+                    labelForehandMagnet.putExtra(Magnetometer.EXTRA_LABEL, "forehand " + countForehand);
+                    context.sendBroadcast(labelForehandMagnet);
+                }
             }
         }
     }
