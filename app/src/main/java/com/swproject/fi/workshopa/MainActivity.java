@@ -36,7 +36,7 @@ public class MainActivity extends Activity implements View.OnTouchListener{
     private static Intent labelForehandMagnet;
     private static int countBackhand = 0;
     private static int countForehand = 0;
-    private static SharedPreferences prefs;
+    private SharedPreferences prefs;
     private Runnable update;
     private Handler handler;
 
@@ -63,6 +63,9 @@ public class MainActivity extends Activity implements View.OnTouchListener{
         btnForehand.setOnTouchListener(this);
 
         prefs = getSharedPreferences(TAG, Context.MODE_PRIVATE);
+        //countForehand = prefs.getInt("forehand", 0);
+        //countBackhand = prefs.getInt("backhand", 0);
+
 
         Aware.setSetting(getApplicationContext(), Aware_Preferences.STATUS_ACCELEROMETER, true);
         Aware.setSetting(getApplicationContext(), Aware_Preferences.FREQUENCY_ACCELEROMETER, 20000);
@@ -179,31 +182,25 @@ public class MainActivity extends Activity implements View.OnTouchListener{
         public void onReceive(Context context, Intent intent) {
             if (intent.getAction().equals(Accelerometer.ACTION_AWARE_ACCELEROMETER)){
                 labelBackhandAccel = new Intent(Accelerometer.ACTION_AWARE_ACCELEROMETER_LABEL);
-                countBackhand = prefs.getInt("backhand", 0);
                 labelBackhandAccel.putExtra(Accelerometer.EXTRA_LABEL, "backhand " + countBackhand);
 
                 labelForehandAccel = new Intent(Accelerometer.ACTION_AWARE_ACCELEROMETER_LABEL);
-                countForehand = prefs.getInt("forehand", 0);
                 labelForehandAccel.putExtra(Accelerometer.EXTRA_LABEL, "forehand " + countForehand);
             }
 
             if (intent.getAction().equals(Gyroscope.ACTION_AWARE_GYROSCOPE)){
                 labelBackhandGyro = new Intent(Gyroscope.ACTION_AWARE_GYROSCOPE_LABEL);
-                countBackhand = prefs.getInt("backhand", 0);
                 labelBackhandGyro.putExtra(Gyroscope.EXTRA_LABEL, "backhand " + countBackhand);
 
                 labelForehandGyro = new Intent(Gyroscope.ACTION_AWARE_GYROSCOPE_LABEL);
-                countForehand = prefs.getInt("forehand", 0);
                 labelForehandGyro.putExtra(Gyroscope.EXTRA_LABEL, "forehand " + countBackhand);
             }
 
             if (intent.getAction().equals(Magnetometer.ACTION_AWARE_MAGNETOMETER)){
                 labelBackhandMagnet = new Intent(Magnetometer.ACTION_AWARE_MAGNETOMETER_LABEL);
-                countBackhand = prefs.getInt("backhand", 0);
                 labelBackhandMagnet.putExtra(Magnetometer.EXTRA_LABEL, "backhand " + countBackhand);
 
                 labelForehandMagnet = new Intent(Magnetometer.ACTION_AWARE_MAGNETOMETER_LABEL);
-                countForehand = prefs.getInt("forehand", 0);
                 labelForehandMagnet.putExtra(Magnetometer.EXTRA_LABEL, "forehand " + countForehand);
             }
         }
