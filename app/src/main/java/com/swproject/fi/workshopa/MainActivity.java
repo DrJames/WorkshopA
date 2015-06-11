@@ -26,31 +26,47 @@ import com.aware.Gyroscope;
 import com.aware.Magnetometer;
 import com.aware.providers.Accelerometer_Provider;
 import com.aware.providers.Gyroscope_Provider;
+import com.aware.providers.Magnetometer_Provider;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 
 public class MainActivity extends Activity implements View.OnTouchListener{
     private static AccelerometerObserver accelObs;
     public static final String TAG = "com.fi.workshopa.MainActivity";
 
-    private static int countBackhand = 0;
-    private static int countForehand = 0;
-    private static boolean isBackPressed = false;
-    private static boolean isForePressed = false;
+    private static int countCommon;
+    private static boolean isNorthPressed = false;
+    private static boolean isSouthPressed = false;
+    private static boolean isWestPressed = false;
+    private static boolean isEastPressed = false;
     private static long timestampStart;
     private static long timestampEnd;
-    private SharedPreferences prefs;
+    private static SharedPreferences prefs;
     private Runnable update;
     private Handler handler;
+    private static List<Double> accel;
+    private static List<Double> gyro;
+    private static List<Double> magnet;
+    private static int label;
+
+    //1 - NORTH
+    //2 - WEST
+    //3 - SOUTH
+    //4 - EAST
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Button btnBackhand = (Button) findViewById(R.id.btnBackhand);
-        Button btnForehand = (Button) findViewById(R.id.btnForehand);
+        Button btnNorth = (Button) findViewById(R.id.btnNorth);
+        Button btnSouth = (Button) findViewById(R.id.btnSouth);
+        Button btnWest = (Button) findViewById(R.id.btnWest);
+        Button btnEast = (Button) findViewById(R.id.btnEast);
 
         /*Switch swh = (Switch) findViewById(R.id.switch1);
         swh.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -63,22 +79,26 @@ public class MainActivity extends Activity implements View.OnTouchListener{
             }
         });*/
         final TextView txtBack = (TextView) findViewById(R.id.txtBackhand);
-        final TextView txtFore = (TextView) findViewById(R.id.txtForehand);
+        //final TextView txtFore = (TextView) findViewById(R.id.txtForehand);
+
+
 
         update = new Runnable() {
             @Override
             public void run() {
-                txtBack.setText("" + countBackhand);
-                txtFore.setText("" + countForehand);
+                txtBack.setText("" + countCommon);
+                //txtFore.setText("" + countForehand);
             }
         };
 
         handler = new Handler();
 
-        btnBackhand.setOnTouchListener(this);
-        btnForehand.setOnTouchListener(this);
+        btnNorth.setOnTouchListener(this);
+        btnSouth.setOnTouchListener(this);
+        btnWest.setOnTouchListener(this);
+        btnEast.setOnTouchListener(this);
 
-        prefs = getSharedPreferences(TAG, Context.MODE_PRIVATE);
+
         //countForehand = prefs.getInt("forehand", 0);
         //countBackhand = prefs.getInt("backhand", 0);
 
@@ -95,6 +115,42 @@ public class MainActivity extends Activity implements View.OnTouchListener{
                 Accelerometer_Provider.Accelerometer_Data.CONTENT_URI,
                 true,
                 accelObs);*/
+        Runnable write = new Runnable() {
+            @Override
+            public void run() {
+
+            }
+        };
+        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+        scheduler.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                Log.e("+++++++", "lOOOOOO");
+                Log.e("++++++", "" + isNorthPressed);
+                if (isNorthPressed || isWestPressed || isSouthPressed || isEastPressed) {
+                    Log.e("++++++++", "WRITING!!!");
+                    if (accel != null && gyro != null && magnet != null){
+                        ContentValues data = new ContentValues();
+                        data.put(Provider.Plugin_Data.TIMESTAMP, System.currentTimeMillis());
+                        data.put(Provider.Plugin_Data.DEVICE_ID, Aware.getSetting(getApplicationContext(), Aware_Preferences.DEVICE_ID));
+                        data.put(Provider.Plugin_Data.ACCEL_AXIS_X, accel.get(0));
+                        data.put(Provider.Plugin_Data.ACCEL_AXIS_Y, accel.get(1));
+                        data.put(Provider.Plugin_Data.ACCEL_AXIS_Z, accel.get(2));
+                        data.put(Provider.Plugin_Data.GYRO_AXIS_X, gyro.get(0));
+                        data.put(Provider.Plugin_Data.GYRO_AXIS_Y, gyro.get(1));
+                        data.put(Provider.Plugin_Data.GYRO_AXIS_Z, gyro.get(2));
+                        data.put(Provider.Plugin_Data.MAGNET_AXIS_X, magnet.get(0));
+                        data.put(Provider.Plugin_Data.MAGNET_AXIS_Y, magnet.get(1));
+                        data.put(Provider.Plugin_Data.MAGNET_AXIS_Z, magnet.get(2));
+                        data.put(Provider.Plugin_Data.LABEL, label);
+                        data.put(Provider.Plugin_Data.COUNT, countCommon);
+                        getApplicationContext().getContentResolver().insert(Provider.Plugin_Data.CONTENT_URI, data);
+
+                        //Log.e("++++++++", "WRITING!!!");
+                    }
+                }
+            }
+        }, 0, 200, TimeUnit.MICROSECONDS);
 
         IntentFilter filter = new IntentFilter();
         filter.addAction(Accelerometer.ACTION_AWARE_ACCELEROMETER);
@@ -103,6 +159,9 @@ public class MainActivity extends Activity implements View.OnTouchListener{
         registerReceiver(accelReceiver, filter);
         sendBroadcast(new Intent(Aware.ACTION_AWARE_REFRESH));
     }
+
+    private ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
+    //service.scheduleAtFixedRate
 
     @Override
     public void onResume(){
@@ -135,54 +194,80 @@ public class MainActivity extends Activity implements View.OnTouchListener{
     public void onDestroy(){
         super.onDestroy();
         unregisterReceiver(accelReceiver);
-        getContentResolver().unregisterContentObserver(accelObs);
+        //getContentResolver().unregisterContentObserver(accelObs);
         Aware.setSetting(getApplicationContext(), Aware_Preferences.STATUS_ACCELEROMETER, false);
         Aware.setSetting(getApplicationContext(), Aware_Preferences.STATUS_MAGNETOMETER, false);
         Aware.setSetting(getApplicationContext(), Aware_Preferences.STATUS_GYROSCOPE, false);
         sendBroadcast(new Intent(Aware.ACTION_AWARE_REFRESH));
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putInt("counter", countCommon);
+        editor.apply();
     }
 
     @Override
     public boolean onTouch(View view, MotionEvent motionEvent) {
-        SharedPreferences.Editor editor = prefs.edit();
+
         switch (view.getId()){
-            case R.id.btnBackhand:
+            case R.id.btnNorth:
                 switch (motionEvent.getAction()){
                     case MotionEvent.ACTION_DOWN:
-                        isBackPressed = true;
-                        Log.e(TAG, "ACTION_DOWN");
+                        isNorthPressed = true;
+                        //Log.e(TAG, "ACTION_DOWN");
                         timestampStart = System.currentTimeMillis();
                         return true;
 
                     case MotionEvent.ACTION_UP:
-                        isBackPressed = false;
+                        isNorthPressed = false;
                         timestampEnd = System.currentTimeMillis();
-                        Log.e(TAG, "ACTION_UP");
-                        editor.putInt("backhand", countBackhand);
-                        editor.apply();
-                        countBackhand++;
+                        //Log.e(TAG, "ACTION_UP");
+                        //editor.putInt("backhand", countCommon);
+                        //editor.apply();
+                        countCommon++;
                         //editor.commit();
                         handler.postDelayed(update, 0);
                         return true;
                 }
             break;
-            case R.id.btnForehand:
+            case R.id.btnSouth:
                 switch (motionEvent.getAction()){
                     case MotionEvent.ACTION_DOWN:
-                        isForePressed = true;
-
+                        isSouthPressed = true;
                         return true;
 
                     case MotionEvent.ACTION_UP:
-                        isForePressed = false;
-                        editor.putInt("forehand", countForehand);
-                        editor.apply();
-                        countForehand++;
+                        isSouthPressed = false;
+                        //editor.putInt("forehand", countCommon);
+                        //editor.apply();
+                        countCommon++;
                         //editor.commit();
                         handler.postDelayed(update, 0);
                         return true;
                 }
             break;
+            case R.id.btnWest:
+                switch (motionEvent.getAction()){
+                    case MotionEvent.ACTION_DOWN:
+                        isWestPressed = true;
+                        return true;
+
+                    case MotionEvent.ACTION_UP:
+                        isWestPressed = false;
+                        countCommon++;
+                        handler.postDelayed(update, 0);
+                        return true;
+                }
+            break;
+            case R.id.btnEast:
+                switch (motionEvent.getAction()){
+                    case MotionEvent.ACTION_DOWN:
+                        isEastPressed = true;
+                        return true;
+                    case MotionEvent.ACTION_UP:
+                        isEastPressed = false;
+                        countCommon++;
+                        handler.postDelayed(update, 0);
+                        return true;
+                }
         }
         return false;
     }
@@ -206,61 +291,124 @@ public class MainActivity extends Activity implements View.OnTouchListener{
     private static AccelReceiver accelReceiver = new AccelReceiver();
 
     public static class AccelReceiver extends BroadcastReceiver{
-        private List<Double> accel;
-        private List<Double> gyro;
-        private List<Double> magnet;
+
         @Override
         public void onReceive(Context context, Intent intent) {
+
             if (intent.getAction().equals(Accelerometer.ACTION_AWARE_ACCELEROMETER)){
                 ContentValues raw_data = (ContentValues) intent.getParcelableExtra(Accelerometer.EXTRA_DATA);
                 Log.d("DEMO", raw_data.toString());
+                prefs = context.getSharedPreferences(TAG, Context.MODE_PRIVATE);
+                if (countCommon == 0)
+                    countCommon = prefs.getInt("counter", 0);
 
-                accel = new ArrayList<>(2);
+                if (isNorthPressed){
+                    accel = new ArrayList<>(3);
+                    accel.add(raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_0));
+                    accel.add(raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_1));
+                    accel.add(raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_2));
+                    label = 1;
+                    Log.e("+++", accel.toString());
+                }
 
-                double x = raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_0);
-                double y = raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_1);
-                double z = raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_2);
+                if (isWestPressed){
+                    accel = new ArrayList<>(3);
+                    accel.add(raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_0));
+                    accel.add(raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_1));
+                    accel.add(raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_2));
+                    label = 2;
+                }
 
-                if (isBackPressed){
-                    ContentValues data = new ContentValues();
-                    data.put(Provider.Plugin_Data.TIMESTAMP, System.currentTimeMillis());
-                    data.put(Provider.Plugin_Data.DEVICE_ID, Aware.getSetting(context, Aware_Preferences.DEVICE_ID));
-                    data.put(Provider.Plugin_Data.ACCEL_AXIS_X, x);
-                    data.put(Provider.Plugin_Data.ACCEL_AXIS_Y, y);
-                    data.put(Provider.Plugin_Data.ACCEL_AXIS_Z, z);
-                    data.put(Provider.Plugin_Data.COUNT, countBackhand);
-                    context.getContentResolver().insert(Provider.Plugin_Data.CONTENT_URI, data);
+                if (isSouthPressed){
+                    accel = new ArrayList<>(3);
+                    accel.add(raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_0));
+                    accel.add(raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_1));
+                    accel.add(raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_2));
+                    label = 3;
+                }
+
+                if (isEastPressed){
+                    accel = new ArrayList<>(3);
+                    accel.add(raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_0));
+                    accel.add(raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_1));
+                    accel.add(raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_2));
+                    label = 4;
                 }
             }
 
             if (intent.getAction().equals(Gyroscope.ACTION_AWARE_GYROSCOPE)){
                 ContentValues raw_data = (ContentValues) intent.getParcelableExtra(Accelerometer.EXTRA_DATA);
 
-                double x = raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_0);
-                double y = raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_1);
-                double z = raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_2);
 
-                if (isBackPressed){
-                    ContentValues data = new ContentValues();
-                    //data.put();
+
+                if (isNorthPressed){
+                    gyro = new ArrayList<>(3);
+                    gyro.add(raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_0));
+                    gyro.add(raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_1));
+                    gyro.add(raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_2));
+                    label = 1;
                 }
-                if (isForePressed){
-                    Intent labelForehandGyro = new Intent(Gyroscope.ACTION_AWARE_GYROSCOPE_LABEL);
-                    labelForehandGyro.putExtra(Gyroscope.EXTRA_LABEL, "forehand " + countBackhand);
-                    context.sendBroadcast(labelForehandGyro);
+
+                if (isWestPressed){
+                    gyro = new ArrayList<>(3);
+                    gyro.add(raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_0));
+                    gyro.add(raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_1));
+                    gyro.add(raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_2));
+                    label = 2;
+                }
+
+                if (isSouthPressed){
+                    gyro = new ArrayList<>(3);
+                    gyro.add(raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_0));
+                    gyro.add(raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_1));
+                    gyro.add(raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_2));
+                    label = 3;
+                }
+
+                if (isEastPressed){
+                    gyro = new ArrayList<>(3);
+                    gyro.add(raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_0));
+                    gyro.add(raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_1));
+                    gyro.add(raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_2));
+                    label = 4;
                 }
             }
 
             if (intent.getAction().equals(Magnetometer.ACTION_AWARE_MAGNETOMETER)){
-                if (isBackPressed){
-                    Intent labelBackhandMagnet = new Intent(Magnetometer.ACTION_AWARE_MAGNETOMETER_LABEL);
-                    labelBackhandMagnet.putExtra(Magnetometer.EXTRA_LABEL, "backhand " + countBackhand);
-                    context.sendBroadcast(labelBackhandMagnet);
+                ContentValues raw_data = (ContentValues) intent.getParcelableExtra(Accelerometer.EXTRA_DATA);
+
+
+
+                if (isNorthPressed){
+                    magnet = new ArrayList<>(3);
+                    magnet.add(raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_0));
+                    magnet.add(raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_1));
+                    magnet.add(raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_2));
+                    label = 1;
                 }
-                if (isForePressed){
-                    Intent labelForehandMagnet = new Intent(Magnetometer.ACTION_AWARE_MAGNETOMETER_LABEL);
-                    labelForehandMagnet.putExtra(Magnetometer.EXTRA_LABEL, "forehand " + countForehand);
-                    context.sendBroadcast(labelForehandMagnet);
+
+                if (isWestPressed){
+                    magnet = new ArrayList<>(3);
+                    magnet.add(raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_0));
+                    magnet.add(raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_1));
+                    magnet.add(raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_2));
+                    label = 2;
+                }
+
+                if (isSouthPressed){
+                    magnet = new ArrayList<>(3);
+                    magnet.add(raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_0));
+                    magnet.add(raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_1));
+                    magnet.add(raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_2));
+                    label = 3;
+                }
+
+                if (isEastPressed){
+                    magnet = new ArrayList<>(3);
+                    magnet.add(raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_0));
+                    magnet.add(raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_1));
+                    magnet.add(raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_2));
+                    label = 4;
                 }
             }
         }
@@ -274,7 +422,7 @@ public class MainActivity extends Activity implements View.OnTouchListener{
         @Override
         public void onChange(boolean selfChange) {
             super.onChange(selfChange);
-            if (isBackPressed){
+            if (isEastPressed){
                 Cursor raw_data = getContentResolver().query(
                         Accelerometer_Provider.Accelerometer_Data.CONTENT_URI,
                         null,

@@ -26,11 +26,11 @@ public class Provider extends ContentProvider {
 
     public static final int DATABASE_VERSION = 1;
 
-    public static String AUTHORITY = "com.swproject.fi.workshopa.provider.plugin_indoor";
-    public static final String DATABASE_NAME = Environment.getExternalStorageDirectory() + "/AWARE/plugin_indoor.db";
+    public static String AUTHORITY = "com.swproject.fi.workshopa.provider.catchy_data";
+    public static final String DATABASE_NAME = Environment.getExternalStorageDirectory() + "/AWARE/catchy_data.db";
 
-    private static final int PLUGIN_INDOOR = 1;
-    private static final int PLUGIN_INDOOR_ID = 4;
+    private static final int PLUGIN_INDOOR = 2;
+    private static final int PLUGIN_INDOOR_ID = 6;
 
     private static UriMatcher URIMatcher;
     private static HashMap<String, String> databaseMap;
@@ -38,7 +38,7 @@ public class Provider extends ContentProvider {
     private static SQLiteDatabase database;
 
     public static final String[] DATABASE_TABLES = {
-            "plugin_indoor"
+            "catchy_data"
     };
 
     public static final String[] TABLES_FIELDS = {
@@ -56,7 +56,7 @@ public class Provider extends ContentProvider {
                     Plugin_Data.MAGNET_AXIS_X + " real default 0," +
                     Plugin_Data.MAGNET_AXIS_Y + " real default 0," +
                     Plugin_Data.MAGNET_AXIS_Z + " real default 0," +
-                    Plugin_Data.LABEL + " text default ''" +
+                    Plugin_Data.LABEL + " integer default 0," +
                     Plugin_Data.COUNT + " integer default 0," +
                     Plugin_Data.ELAPSED_OUTDOOR + " real default 0," +
                     Plugin_Data.ELAPSED_INDOOR + " real default 0," +
@@ -66,9 +66,9 @@ public class Provider extends ContentProvider {
     public static final class Plugin_Data implements BaseColumns {
         private Plugin_Data(){}
 
-        public static final Uri CONTENT_URI = Uri.parse("content://"+AUTHORITY+"/plugin_indoor");
-        public static final String CONTENT_TYPE = "vnd.android.cursor.dir/vnd.aware.plugin.indoor";
-        public static final String CONTENT_ITEM_TYPE = "vnd.android.cursor.item/vnd.aware.plugin.indoor";
+        public static final Uri CONTENT_URI = Uri.parse("content://"+AUTHORITY+"/catchy_data");
+        public static final String CONTENT_TYPE = "vnd.android.cursor.dir/vnd.aware.catchy.data";
+        public static final String CONTENT_ITEM_TYPE = "vnd.android.cursor.item/vnd.aware.catchy.data";
 
         public static final String _ID = "_id";
         public static final String TIMESTAMP = "timestamp";
@@ -93,7 +93,7 @@ public class Provider extends ContentProvider {
 
     @Override
     public boolean onCreate() {
-        AUTHORITY = getContext().getPackageName() + ".provider.plugin_indoor";
+        AUTHORITY = getContext().getPackageName() + ".provider.catchy_data";
         URIMatcher = new UriMatcher(UriMatcher.NO_MATCH);
         URIMatcher.addURI(AUTHORITY, DATABASE_TABLES[0], PLUGIN_INDOOR);
         URIMatcher.addURI(AUTHORITY, DATABASE_TABLES[0]+"/#", PLUGIN_INDOOR_ID);

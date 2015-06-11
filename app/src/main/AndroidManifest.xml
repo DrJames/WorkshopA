@@ -20,7 +20,7 @@
         </activity>
         <receiver android:name=".MainActivity$AccelReceiver"/>
         <provider
-            android:authorities="com.swproject.fi.workshopa.provider.plugin_indoor"
+            android:authorities="com.swproject.fi.workshopa.provider.catchy_data"
             android:name="com.swproject.fi.workshopa.Provider"
             android:enabled="true"
             android:exported="true"/>
