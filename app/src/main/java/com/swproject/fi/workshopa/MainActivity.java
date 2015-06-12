@@ -196,7 +196,7 @@ public class MainActivity extends Activity implements View.OnTouchListener{
                         handler.postDelayed(update, 0);
                         return true;
                 }
-            break;
+                break;
             case R.id.btnSouth:
                 switch (motionEvent.getAction()){
                     case MotionEvent.ACTION_DOWN:
@@ -209,7 +209,7 @@ public class MainActivity extends Activity implements View.OnTouchListener{
                         handler.postDelayed(update, 0);
                         return true;
                 }
-            break;
+                break;
             case R.id.btnWest:
                 switch (motionEvent.getAction()){
                     case MotionEvent.ACTION_DOWN:
@@ -222,7 +222,7 @@ public class MainActivity extends Activity implements View.OnTouchListener{
                         handler.postDelayed(update, 0);
                         return true;
                 }
-            break;
+                break;
             case R.id.btnEast:
                 switch (motionEvent.getAction()){
                     case MotionEvent.ACTION_DOWN:
@@ -302,7 +302,7 @@ public class MainActivity extends Activity implements View.OnTouchListener{
             }
 
             if (intent.getAction().equals(Gyroscope.ACTION_AWARE_GYROSCOPE)){
-                ContentValues raw_data = (ContentValues) intent.getParcelableExtra(Accelerometer.EXTRA_DATA);
+                ContentValues raw_data = (ContentValues) intent.getParcelableExtra(Gyroscope.EXTRA_DATA);
 
                 if (isNorthPressed){
                     gyro = new Double[3];
@@ -338,7 +338,7 @@ public class MainActivity extends Activity implements View.OnTouchListener{
             }
 
             if (intent.getAction().equals(Magnetometer.ACTION_AWARE_MAGNETOMETER)){
-                ContentValues raw_data = (ContentValues) intent.getParcelableExtra(Accelerometer.EXTRA_DATA);
+                ContentValues raw_data = (ContentValues) intent.getParcelableExtra(Magnetometer.EXTRA_DATA);
 
                 if (isNorthPressed){
                     magnet = new Double[3];
@@ -406,7 +406,7 @@ public class MainActivity extends Activity implements View.OnTouchListener{
                 }
                 if( raw_data != null && ! raw_data.isClosed() ) raw_data.close();
             }
-            }
+        }
 
     }
 }

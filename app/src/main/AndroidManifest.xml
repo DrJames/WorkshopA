@@ -3,27 +3,52 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.swproject.fi.workshopa" >
 
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        tools:replace="android:theme, android:icon"
-        android:theme="@style/AppTheme" >
+        android:theme="@style/AppTheme"
+        tools:replace="android:theme, android:icon" >
         <activity
             android:name=".MainActivity"
             android:label="@string/app_name" >
+
+
+        </activity>
+
+        <receiver android:name=".MainActivity$AccelReceiver" />
+
+        <provider
+            android:name=".Provider"
+            android:authorities="com.swproject.fi.workshopa.provider.catchy_data"
+            android:enabled="true"
+            android:exported="true" />
+
+        <activity
+            android:name=".AppActivity"
+            android:label="@string/title_activity_app">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <receiver android:name=".MainActivity$AccelReceiver"/>
-        <provider
-            android:authorities="com.swproject.fi.workshopa.provider.catchy_data"
-            android:name="com.swproject.fi.workshopa.Provider"
-            android:enabled="true"
-            android:exported="true"/>
+
+        <activity
+            android:name=".BluetoothConnect"
+            android:label="@string/title_activity_bluetooth_connect" >
+        </activity>
+        <activity
+            android:name=".DeviceListActivity"
+            android:label="@string/title_activity_device_list" >
+        </activity>
+        <activity
+            android:name=".SuccessfullConnectActivity"
+            android:label="@string/title_activity_successfull_connect" >
+        </activity>
     </application>
 
 </manifest>
