@@ -28,8 +28,6 @@ import com.aware.providers.Accelerometer_Provider;
 import com.aware.providers.Gyroscope_Provider;
 import com.aware.providers.Magnetometer_Provider;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -44,15 +42,14 @@ public class MainActivity extends Activity implements View.OnTouchListener{
     private static boolean isSouthPressed = false;
     private static boolean isWestPressed = false;
     private static boolean isEastPressed = false;
-    private static long timestampStart;
-    private static long timestampEnd;
     private static SharedPreferences prefs;
     private Runnable update;
     private Handler handler;
-    private static List<Double> accel;
-    private static List<Double> gyro;
-    private static List<Double> magnet;
+    private static Double[] accel;
+    private static Double[] gyro;
+    private static Double[] magnet;
     private static int label;
+    private String flag;
 
     //1 - NORTH
     //2 - WEST
@@ -68,6 +65,11 @@ public class MainActivity extends Activity implements View.OnTouchListener{
         Button btnWest = (Button) findViewById(R.id.btnWest);
         Button btnEast = (Button) findViewById(R.id.btnEast);
 
+        btnNorth.setOnTouchListener(this);
+        btnSouth.setOnTouchListener(this);
+        btnWest.setOnTouchListener(this);
+        btnEast.setOnTouchListener(this);
+
         /*Switch swh = (Switch) findViewById(R.id.switch1);
         swh.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
@@ -79,29 +81,19 @@ public class MainActivity extends Activity implements View.OnTouchListener{
             }
         });*/
         final TextView txtBack = (TextView) findViewById(R.id.txtBackhand);
-        //final TextView txtFore = (TextView) findViewById(R.id.txtForehand);
 
-
+        if (flag == null){
+            flag = "started";
+        }
 
         update = new Runnable() {
             @Override
             public void run() {
                 txtBack.setText("" + countCommon);
-                //txtFore.setText("" + countForehand);
             }
         };
 
         handler = new Handler();
-
-        btnNorth.setOnTouchListener(this);
-        btnSouth.setOnTouchListener(this);
-        btnWest.setOnTouchListener(this);
-        btnEast.setOnTouchListener(this);
-
-
-        //countForehand = prefs.getInt("forehand", 0);
-        //countBackhand = prefs.getInt("backhand", 0);
-
 
         Aware.setSetting(getApplicationContext(), Aware_Preferences.STATUS_ACCELEROMETER, true);
         Aware.setSetting(getApplicationContext(), Aware_Preferences.FREQUENCY_ACCELEROMETER, 20000);
@@ -110,17 +102,6 @@ public class MainActivity extends Activity implements View.OnTouchListener{
         Aware.setSetting(getApplicationContext(), Aware_Preferences.STATUS_MAGNETOMETER, true);
         Aware.setSetting(getApplicationContext(), Aware_Preferences.FREQUENCY_MAGNETOMETER, 20000);
 
-        /*accelObs = new AccelerometerObserver(new Handler());
-        getContentResolver().registerContentObserver(
-                Accelerometer_Provider.Accelerometer_Data.CONTENT_URI,
-                true,
-                accelObs);*/
-        Runnable write = new Runnable() {
-            @Override
-            public void run() {
-
-            }
-        };
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
         scheduler.scheduleAtFixedRate(new Runnable() {
             @Override
@@ -133,24 +114,23 @@ public class MainActivity extends Activity implements View.OnTouchListener{
                         ContentValues data = new ContentValues();
                         data.put(Provider.Plugin_Data.TIMESTAMP, System.currentTimeMillis());
                         data.put(Provider.Plugin_Data.DEVICE_ID, Aware.getSetting(getApplicationContext(), Aware_Preferences.DEVICE_ID));
-                        data.put(Provider.Plugin_Data.ACCEL_AXIS_X, accel.get(0));
-                        data.put(Provider.Plugin_Data.ACCEL_AXIS_Y, accel.get(1));
-                        data.put(Provider.Plugin_Data.ACCEL_AXIS_Z, accel.get(2));
-                        data.put(Provider.Plugin_Data.GYRO_AXIS_X, gyro.get(0));
-                        data.put(Provider.Plugin_Data.GYRO_AXIS_Y, gyro.get(1));
-                        data.put(Provider.Plugin_Data.GYRO_AXIS_Z, gyro.get(2));
-                        data.put(Provider.Plugin_Data.MAGNET_AXIS_X, magnet.get(0));
-                        data.put(Provider.Plugin_Data.MAGNET_AXIS_Y, magnet.get(1));
-                        data.put(Provider.Plugin_Data.MAGNET_AXIS_Z, magnet.get(2));
+                        data.put(Provider.Plugin_Data.ACCEL_AXIS_X, accel[0]);
+                        data.put(Provider.Plugin_Data.ACCEL_AXIS_Y, accel[1]);
+                        data.put(Provider.Plugin_Data.ACCEL_AXIS_Z, accel[2]);
+                        data.put(Provider.Plugin_Data.GYRO_AXIS_X, gyro[0]);
+                        data.put(Provider.Plugin_Data.GYRO_AXIS_Y, gyro[1]);
+                        data.put(Provider.Plugin_Data.GYRO_AXIS_Z, gyro[2]);
+                        data.put(Provider.Plugin_Data.MAGNET_AXIS_X, magnet[0]);
+                        data.put(Provider.Plugin_Data.MAGNET_AXIS_Y, magnet[1]);
+                        data.put(Provider.Plugin_Data.MAGNET_AXIS_Z, magnet[2]);
                         data.put(Provider.Plugin_Data.LABEL, label);
                         data.put(Provider.Plugin_Data.COUNT, countCommon);
                         getApplicationContext().getContentResolver().insert(Provider.Plugin_Data.CONTENT_URI, data);
-
                         //Log.e("++++++++", "WRITING!!!");
                     }
                 }
             }
-        }, 0, 200, TimeUnit.MICROSECONDS);
+        }, 0, 20, TimeUnit.MICROSECONDS);
 
         IntentFilter filter = new IntentFilter();
         filter.addAction(Accelerometer.ACTION_AWARE_ACCELEROMETER);
@@ -159,9 +139,6 @@ public class MainActivity extends Activity implements View.OnTouchListener{
         registerReceiver(accelReceiver, filter);
         sendBroadcast(new Intent(Aware.ACTION_AWARE_REFRESH));
     }
-
-    private ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
-    //service.scheduleAtFixedRate
 
     @Override
     public void onResume(){
@@ -206,24 +183,16 @@ public class MainActivity extends Activity implements View.OnTouchListener{
 
     @Override
     public boolean onTouch(View view, MotionEvent motionEvent) {
-
         switch (view.getId()){
             case R.id.btnNorth:
                 switch (motionEvent.getAction()){
                     case MotionEvent.ACTION_DOWN:
                         isNorthPressed = true;
-                        //Log.e(TAG, "ACTION_DOWN");
-                        timestampStart = System.currentTimeMillis();
                         return true;
 
                     case MotionEvent.ACTION_UP:
                         isNorthPressed = false;
-                        timestampEnd = System.currentTimeMillis();
-                        //Log.e(TAG, "ACTION_UP");
-                        //editor.putInt("backhand", countCommon);
-                        //editor.apply();
                         countCommon++;
-                        //editor.commit();
                         handler.postDelayed(update, 0);
                         return true;
                 }
@@ -236,10 +205,7 @@ public class MainActivity extends Activity implements View.OnTouchListener{
 
                     case MotionEvent.ACTION_UP:
                         isSouthPressed = false;
-                        //editor.putInt("forehand", countCommon);
-                        //editor.apply();
                         countCommon++;
-                        //editor.commit();
                         handler.postDelayed(update, 0);
                         return true;
                 }
@@ -303,35 +269,34 @@ public class MainActivity extends Activity implements View.OnTouchListener{
                     countCommon = prefs.getInt("counter", 0);
 
                 if (isNorthPressed){
-                    accel = new ArrayList<>(3);
-                    accel.add(raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_0));
-                    accel.add(raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_1));
-                    accel.add(raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_2));
+                    accel = new Double[3];
+                    accel[0] = (raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_0));
+                    accel[1] = (raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_1));
+                    accel[2] = (raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_2));
                     label = 1;
-                    Log.e("+++", accel.toString());
                 }
 
                 if (isWestPressed){
-                    accel = new ArrayList<>(3);
-                    accel.add(raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_0));
-                    accel.add(raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_1));
-                    accel.add(raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_2));
+                    accel = new Double[3];
+                    accel[0] = (raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_0));
+                    accel[1] = (raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_1));
+                    accel[2] = (raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_2));
                     label = 2;
                 }
 
                 if (isSouthPressed){
-                    accel = new ArrayList<>(3);
-                    accel.add(raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_0));
-                    accel.add(raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_1));
-                    accel.add(raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_2));
+                    accel = new Double[3];
+                    accel[0] = (raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_0));
+                    accel[1] = (raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_1));
+                    accel[2] = (raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_2));
                     label = 3;
                 }
 
                 if (isEastPressed){
-                    accel = new ArrayList<>(3);
-                    accel.add(raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_0));
-                    accel.add(raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_1));
-                    accel.add(raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_2));
+                    accel = new Double[3];
+                    accel[0] = (raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_0));
+                    accel[1] = (raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_1));
+                    accel[2] = (raw_data.getAsDouble(Accelerometer_Provider.Accelerometer_Data.VALUES_2));
                     label = 4;
                 }
             }
@@ -339,37 +304,35 @@ public class MainActivity extends Activity implements View.OnTouchListener{
             if (intent.getAction().equals(Gyroscope.ACTION_AWARE_GYROSCOPE)){
                 ContentValues raw_data = (ContentValues) intent.getParcelableExtra(Accelerometer.EXTRA_DATA);
 
-
-
                 if (isNorthPressed){
-                    gyro = new ArrayList<>(3);
-                    gyro.add(raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_0));
-                    gyro.add(raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_1));
-                    gyro.add(raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_2));
+                    gyro = new Double[3];
+                    gyro[0] = (raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_0));
+                    gyro[1] = (raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_1));
+                    gyro[2] = (raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_2));
                     label = 1;
                 }
 
                 if (isWestPressed){
-                    gyro = new ArrayList<>(3);
-                    gyro.add(raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_0));
-                    gyro.add(raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_1));
-                    gyro.add(raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_2));
+                    gyro = new Double[3];
+                    gyro[0] = (raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_0));
+                    gyro[1] = (raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_1));
+                    gyro[2] = (raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_2));
                     label = 2;
                 }
 
                 if (isSouthPressed){
-                    gyro = new ArrayList<>(3);
-                    gyro.add(raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_0));
-                    gyro.add(raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_1));
-                    gyro.add(raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_2));
+                    gyro = new Double[3];
+                    gyro[0] = (raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_0));
+                    gyro[1] = (raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_1));
+                    gyro[2] = (raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_2));
                     label = 3;
                 }
 
                 if (isEastPressed){
-                    gyro = new ArrayList<>(3);
-                    gyro.add(raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_0));
-                    gyro.add(raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_1));
-                    gyro.add(raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_2));
+                    gyro = new Double[3];
+                    gyro[0] = (raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_0));
+                    gyro[1] = (raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_1));
+                    gyro[2] = (raw_data.getAsDouble(Gyroscope_Provider.Gyroscope_Data.VALUES_2));
                     label = 4;
                 }
             }
@@ -377,37 +340,35 @@ public class MainActivity extends Activity implements View.OnTouchListener{
             if (intent.getAction().equals(Magnetometer.ACTION_AWARE_MAGNETOMETER)){
                 ContentValues raw_data = (ContentValues) intent.getParcelableExtra(Accelerometer.EXTRA_DATA);
 
-
-
                 if (isNorthPressed){
-                    magnet = new ArrayList<>(3);
-                    magnet.add(raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_0));
-                    magnet.add(raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_1));
-                    magnet.add(raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_2));
+                    magnet = new Double[3];
+                    magnet[0] = (raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_0));
+                    magnet[1] = (raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_1));
+                    magnet[2] = (raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_2));
                     label = 1;
                 }
 
                 if (isWestPressed){
-                    magnet = new ArrayList<>(3);
-                    magnet.add(raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_0));
-                    magnet.add(raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_1));
-                    magnet.add(raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_2));
+                    magnet = new Double[3];
+                    magnet[0] = (raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_0));
+                    magnet[1] = (raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_1));
+                    magnet[2] = (raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_2));
                     label = 2;
                 }
 
                 if (isSouthPressed){
-                    magnet = new ArrayList<>(3);
-                    magnet.add(raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_0));
-                    magnet.add(raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_1));
-                    magnet.add(raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_2));
+                    magnet = new Double[3];
+                    magnet[0] = (raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_0));
+                    magnet[1] = (raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_1));
+                    magnet[2] = (raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_2));
                     label = 3;
                 }
 
                 if (isEastPressed){
-                    magnet = new ArrayList<>(3);
-                    magnet.add(raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_0));
-                    magnet.add(raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_1));
-                    magnet.add(raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_2));
+                    magnet = new Double[3];
+                    magnet[0] = (raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_0));
+                    magnet[1] = (raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_1));
+                    magnet[2] = (raw_data.getAsDouble(Magnetometer_Provider.Magnetometer_Data.VALUES_2));
                     label = 4;
                 }
             }
