@@ -10,7 +10,7 @@
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Throw"
+        android:text="Throw                                 "
         android:id="@+id/btnThrow"
         android:layout_alignParentTop="true"
         android:layout_centerHorizontal="true" />
@@ -18,11 +18,12 @@
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Receive"
+        android:text="Receive                                  "
         android:id="@+id/btnReceive"
+        android:layout_marginTop="44dp"
         android:layout_below="@+id/btnThrow"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="43dp" />
+        android:layout_alignLeft="@+id/btnThrow"
+        android:layout_alignStart="@+id/btnThrow" />
 
     <Button
         android:layout_width="wrap_content"

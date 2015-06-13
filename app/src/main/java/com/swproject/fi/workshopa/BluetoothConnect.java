@@ -275,7 +275,8 @@ public class BluetoothConnect extends Activity implements View.OnClickListener{
                     byte[] readBuf = (byte[]) msg.obj;
                     // construct a string from the valid bytes in the buffer
                     String readMessage = new String(readBuf, 0, msg.arg1);
-                    Toast.makeText(getApplicationContext(), readMessage, Toast.LENGTH_SHORT).show();
+                    AppActivity.remoteResponse = readMessage;
+                    Toast.makeText(getApplicationContext(), AppActivity.remoteResponse, Toast.LENGTH_SHORT).show();
                     break;
                 case MESSAGE_DEVICE_NAME:
                     // save the connected device's name

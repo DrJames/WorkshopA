@@ -19,7 +19,8 @@
 
         </activity>
 
-        <receiver android:name=".MainActivity$AccelReceiver" />
+        <receiver android:name=".MainActivity$DataReceiver" />
+        <receiver android:name="Glo" />
 
         <provider
             android:name=".Provider"
@@ -44,10 +45,6 @@
         <activity
             android:name=".DeviceListActivity"
             android:label="@string/title_activity_device_list" >
-        </activity>
-        <activity
-            android:name=".SuccessfullConnectActivity"
-            android:label="@string/title_activity_successfull_connect" >
         </activity>
     </application>
 
